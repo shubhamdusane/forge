@@ -1,0 +1,31 @@
+{
+  "asset_type": "real_estate",
+  "asset_name": "Singapore CBD Office Tower",
+  "jurisdiction": "SG",
+  "token": {
+    "name": "Singapore CBD Office Tower Token",
+    "symbol": "SCOT",
+    "decimals": 18,
+    "max_supply": 1000000,
+    "transferable": true,
+    "pausable": true
+  },
+  "compliance": {
+    "kyc_required": true,
+    "accredited_investor_only": true,
+    "max_investors": 500,
+    "min_holding_period_days": 90,
+    "lock_period_days": 180,
+    "jurisdictions_blocked": ["KP", "IR", "CU", "SY"]
+  },
+  "oracle": {
+    "enabled": true,
+    "provider": "chainlink",
+    "update_frequency_hours": 24
+  },
+  "dividend": {
+    "enabled": true,
+    "payment_token": "USDC",
+    "distribution_frequency": "quarterly"
+  }
+}
