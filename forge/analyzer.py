@@ -5,7 +5,7 @@ and extract a structured AssetConfig.
 This is forge's core intelligence layer.
 
 How it works:
-1. Takes a natural language description: "tokenize a commercial real estate 
+1. Takes a natural language description: "tokenize a commercial real estate
    property in Dubai, fractional ownership for accredited investors only"
 2. Constructs a structured prompt with ERC-3643 domain knowledge baked in
 3. Calls the LLM (Claude or OpenAI)
@@ -22,15 +22,16 @@ Why LLM vs. rules engine:
 
 import json
 import os
-from typing import Optional, Dict, Any
-from .models import AssetConfig, TokenConfig, ComplianceRules, OracleConfig, DividendConfig
 
+from .models import (
+    AssetConfig,
+)
 
 ANALYSIS_SYSTEM_PROMPT = """You are an expert in Real World Asset (RWA) tokenization, 
 ERC-3643 (T-REX protocol), securities law, and DeFi compliance.
 
 Your task: analyze an asset description and output a complete JSON configuration for 
-tokenizing that asset in a legally compliant, production-ready way.
+tokenizing that asset as a draft configuration for human legal and security review.
 
 You understand:
 - ERC-3643 requires: identity registry (KYC), compliance rules, transfer restrictions
@@ -94,27 +95,27 @@ ALWAYS output valid JSON matching this exact schema. No explanations, no markdow
 class AssetAnalyzer:
     """
     Analyzes natural language asset descriptions to produce ERC-3643 configs.
-    
+
     Usage:
         analyzer = AssetAnalyzer()  # uses ANTHROPIC_API_KEY env var
-        config = analyzer.analyze("Commercial real estate in Dubai, 
+        config = analyzer.analyze("Commercial real estate in Dubai,
                                    fractional ownership for accredited investors")
         print(config.to_json())
-    
+
     Supports:
         - Anthropic Claude (default, recommended)
         - OpenAI GPT-4 (set provider="openai")
         - Any OpenAI-compatible API
     """
-    
+
     def __init__(
         self,
         provider: str = "anthropic",
-        api_key: Optional[str] = None,
-        model: Optional[str] = None,
+        api_key: str | None = None,
+        model: str | None = None,
     ):
         self.provider = provider
-        
+
         if provider == "anthropic":
             self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
             if not self.api_key:
@@ -123,59 +124,56 @@ class AssetAnalyzer:
                     "or pass api_key parameter."
                 )
             self.model = model or "claude-sonnet-4-20250514"
-            
+
         elif provider == "openai":
             self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
             if not self.api_key:
                 raise ValueError(
-                    "OpenAI API key required. Set OPENAI_API_KEY env var "
-                    "or pass api_key parameter."
+                    "OpenAI API key required. Set OPENAI_API_KEY env var or pass api_key parameter."
                 )
             self.model = model or "gpt-4o"
         else:
             raise ValueError(f"Unknown provider: {provider}. Use 'anthropic' or 'openai'.")
-    
+
     def analyze(self, description: str, verbose: bool = False) -> AssetConfig:
         """
         Analyze a natural language asset description.
-        
+
         Args:
             description: Natural language description of the asset to tokenize.
-                        e.g. "Grade A office building in Singapore CBD, 
+                        e.g. "Grade A office building in Singapore CBD,
                                fractional ownership, targeting retail investors"
             verbose: If True, print raw LLM response for debugging.
-        
+
         Returns:
             AssetConfig with all tokenization parameters populated.
-        
+
         Raises:
             ValueError: If the LLM returns invalid JSON.
             RuntimeError: If the API call fails.
         """
         if verbose:
             print(f"[forge] Analyzing: {description[:80]}...")
-        
+
         if self.provider == "anthropic":
             raw = self._call_anthropic(description)
         else:
             raw = self._call_openai(description)
-        
+
         if verbose:
             print(f"[forge] Raw response:\n{raw}")
-        
+
         return self._parse_response(raw)
-    
+
     def _call_anthropic(self, description: str) -> str:
         """Call Anthropic Claude API."""
         try:
             import anthropic
         except ImportError:
-            raise ImportError(
-                "anthropic package required. Install with: pip install anthropic"
-            )
-        
+            raise ImportError("anthropic package required. Install with: pip install anthropic")
+
         client = anthropic.Anthropic(api_key=self.api_key)
-        
+
         message = client.messages.create(
             model=self.model,
             max_tokens=2048,
@@ -183,39 +181,37 @@ class AssetAnalyzer:
             messages=[
                 {
                     "role": "user",
-                    "content": f"Analyze this asset and produce the tokenization config:\n\n{description}"
+                    "content": f"Analyze this asset and produce the tokenization config:\n\n{description}",
                 }
-            ]
+            ],
         )
-        
+
         return message.content[0].text
-    
+
     def _call_openai(self, description: str) -> str:
         """Call OpenAI GPT API."""
         try:
             from openai import OpenAI
         except ImportError:
-            raise ImportError(
-                "openai package required. Install with: pip install openai"
-            )
-        
+            raise ImportError("openai package required. Install with: pip install openai")
+
         client = OpenAI(api_key=self.api_key)
-        
+
         response = client.chat.completions.create(
             model=self.model,
             messages=[
                 {"role": "system", "content": ANALYSIS_SYSTEM_PROMPT},
                 {
                     "role": "user",
-                    "content": f"Analyze this asset and produce the tokenization config:\n\n{description}"
-                }
+                    "content": f"Analyze this asset and produce the tokenization config:\n\n{description}",
+                },
             ],
             response_format={"type": "json_object"},
             max_tokens=2048,
         )
-        
+
         return response.choices[0].message.content
-    
+
     def _parse_response(self, raw: str) -> AssetConfig:
         """Parse raw JSON response into AssetConfig."""
         # Strip markdown code blocks if present
@@ -223,12 +219,10 @@ class AssetAnalyzer:
         if clean.startswith("```"):
             lines = clean.split("\n")
             clean = "\n".join(lines[1:-1])
-        
+
         try:
             data = json.loads(clean)
         except json.JSONDecodeError as e:
-            raise ValueError(
-                f"LLM returned invalid JSON: {e}\n\nRaw response:\n{raw}"
-            )
-        
+            raise ValueError(f"LLM returned invalid JSON: {e}\n\nRaw response:\n{raw}")
+
         return AssetConfig.from_dict(data)

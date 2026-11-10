@@ -11,36 +11,35 @@ Commands:
 import argparse
 import json
 import sys
-import os
 
 
 def cmd_analyze(args):
     from .analyzer import AssetAnalyzer
-    
+
     description = " ".join(args.description)
-    
+
     analyzer = AssetAnalyzer(
         provider=args.provider,
     )
-    
+
     print(f"🔬 Analyzing asset: {description[:80]}...")
     config = analyzer.analyze(description, verbose=args.verbose)
-    
+
     output = config.to_json()
-    
+
     if args.output:
         with open(args.output, "w") as f:
             f.write(output)
         print(f"✅ Config saved to {args.output}")
     else:
         print("\n" + output)
-    
+
     # Always print warnings
     if config.warnings:
         print("\n⚠ Warnings:")
         for w in config.warnings:
             print(f"  • {w}")
-    
+
     if config.recommendations:
         print("\n💡 Recommendations:")
         for r in config.recommendations:
@@ -48,9 +47,9 @@ def cmd_analyze(args):
 
 
 def cmd_check(args):
-    from .validator import ComplianceValidator
     from .models import AssetConfig
-    
+    from .validator import ComplianceValidator
+
     try:
         with open(args.config_file, "r") as f:
             config = AssetConfig.from_json(f.read())
@@ -63,21 +62,21 @@ def cmd_check(args):
     except Exception as e:
         print(f"Error: Failed to load config: {e}", file=sys.stderr)
         sys.exit(1)
-    
+
     validator = ComplianceValidator()
     result = validator.validate(config)
-    
+
     print(result)
-    
+
     # Exit with non-zero if invalid
     if not result.is_valid:
         sys.exit(1)
 
 
 def cmd_scaffold(args):
-    from .scaffolder import Scaffolder
     from .models import AssetConfig
-    
+    from .scaffolder import Scaffolder
+
     try:
         with open(args.config_file, "r") as f:
             config = AssetConfig.from_json(f.read())
@@ -90,18 +89,19 @@ def cmd_scaffold(args):
     except Exception as e:
         print(f"Error: Failed to load config: {e}", file=sys.stderr)
         sys.exit(1)
-    
+
     # Run validation first
     from .validator import ComplianceValidator
+
     validator = ComplianceValidator()
     result = validator.validate(config)
-    
+
     if not result.is_valid:
         print("❌ Config has errors. Fix them before scaffolding:")
         for e in result.errors:
             print(f"  ✗ {e}")
         sys.exit(1)
-    
+
     scaffolder = Scaffolder()
     scaffolder.generate(config, output_dir=args.output_dir)
 
@@ -109,13 +109,17 @@ def cmd_scaffold(args):
 def cmd_demo(args):
     """Run a demo without requiring an API key."""
     from .models import (
-        AssetConfig, TokenConfig, ComplianceRules, OracleConfig, DividendConfig
+        AssetConfig,
+        ComplianceRules,
+        DividendConfig,
+        OracleConfig,
+        TokenConfig,
     )
-    from .validator import ComplianceValidator
     from .scaffolder import Scaffolder
-    
+    from .validator import ComplianceValidator
+
     print("🎬 Running forge demo (no API key required)\n")
-    
+
     # Manually construct a sample config (mimics what LLM would produce)
     config = AssetConfig(
         asset_type="real_estate",
@@ -159,22 +163,22 @@ def cmd_demo(args):
             "Quarterly USDC dividends from rental yield."
         ),
     )
-    
+
     print("📋 Sample AssetConfig:")
     print(config.to_json())
-    
+
     # Validate
     print("\n🔍 Running compliance validation...")
     validator = ComplianceValidator()
     result = validator.validate(config)
     print(result)
-    
+
     # Scaffold
     output_dir = args.output_dir or "./forge-demo-contracts"
     print(f"\n🏗 Generating contracts in {output_dir}/...")
     scaffolder = Scaffolder()
     scaffolder.generate(config, output_dir=output_dir)
-    
+
     print("\n✅ Demo complete!")
 
 
@@ -190,40 +194,40 @@ Examples:
   forge check config.json
   forge scaffold config.json --output-dir ./my-token
   forge demo
-        """
+        """,
     )
-    
+
     subparsers = parser.add_subparsers(dest="command", required=True)
-    
+
     # analyze
     p_analyze = subparsers.add_parser("analyze", help="Analyze an asset description")
     p_analyze.add_argument("description", nargs="+", help="Natural language asset description")
     p_analyze.add_argument("--output", "-o", help="Save config to this JSON file")
     p_analyze.add_argument("--provider", default="anthropic", choices=["anthropic", "openai"])
     p_analyze.add_argument("--verbose", "-v", action="store_true")
-    
+
     # check
     p_check = subparsers.add_parser("check", help="Validate a config JSON file")
     p_check.add_argument("config_file", help="Path to config.json")
-    
+
     # scaffold
     p_scaffold = subparsers.add_parser("scaffold", help="Generate contracts from config")
     p_scaffold.add_argument("config_file", help="Path to config.json")
     p_scaffold.add_argument("--output-dir", "-o", default="./contracts", help="Output directory")
-    
+
     # demo
     p_demo = subparsers.add_parser("demo", help="Run demo without API key")
     p_demo.add_argument("--output-dir", "-o", default=None)
-    
+
     args = parser.parse_args()
-    
+
     dispatch = {
         "analyze": cmd_analyze,
         "check": cmd_check,
         "scaffold": cmd_scaffold,
         "demo": cmd_demo,
     }
-    
+
     dispatch[args.command](args)
 
 

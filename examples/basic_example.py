@@ -3,7 +3,8 @@ Forge - Core Example
 Demonstrates basic Forge functionality for building and composing agent workflows.
 """
 
-from forge import Forge, Workflow, Step
+from forge import Forge, Step, Workflow
+
 
 def main():
     # Initialize Forge
@@ -18,13 +19,17 @@ def main():
     workflow.add_step(Step("load", description="Load data to destination"))
 
     # Execute the workflow
-    result = forge.run(workflow, params={
-        "source": "s3://my-bucket/raw",
-        "destination": "postgres://localhost/analytics"
-    })
+    result = forge.run(
+        workflow,
+        params={
+            "source": "s3://my-bucket/raw",
+            "destination": "postgres://localhost/analytics",
+        },
+    )
 
     print(f"Workflow status: {result.status}")
     print(f"Steps completed: {result.steps_completed}")
+
 
 if __name__ == "__main__":
     main()

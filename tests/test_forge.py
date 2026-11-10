@@ -4,19 +4,14 @@ import json
 import os
 import tempfile
 
-import pytest
-
 from forge.models import (
     AssetConfig,
-    TokenConfig,
     ComplianceRules,
-    OracleConfig,
-    DividendConfig,
+    TokenConfig,
     ValidationResult,
 )
-from forge.validator import ComplianceValidator
 from forge.scaffolder import Scaffolder
-
+from forge.validator import ComplianceValidator
 
 # ── MODEL TESTS ───────────────────────────────────────────────────────────────
 
@@ -84,11 +79,13 @@ class TestAssetConfig:
         assert data["asset_name"] == "US Treasury Bond"
 
     def test_from_json(self):
-        j = json.dumps({
-            "asset_type": "art",
-            "asset_name": "Mona Lisa",
-            "token": {"name": "Mona Lisa Token", "symbol": "MLT"},
-        })
+        j = json.dumps(
+            {
+                "asset_type": "art",
+                "asset_name": "Mona Lisa",
+                "token": {"name": "Mona Lisa Token", "symbol": "MLT"},
+            }
+        )
         config = AssetConfig.from_json(j)
         assert config.asset_type == "art"
         assert config.asset_name == "Mona Lisa"

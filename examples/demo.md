@@ -1,6 +1,6 @@
 # forge — Walkthrough
 
-Three commands. English → deployment-ready ERC-3643 project.
+Three commands. English → draft ERC-3643 project scaffold (for review, not production).
 
 ## Prerequisites
 
